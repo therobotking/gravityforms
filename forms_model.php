@@ -2224,7 +2224,7 @@ class GFFormsModel {
 		// Delete from entry meta
 		$sql = $wpdb->prepare( "DELETE FROM $entry_meta_table WHERE form_id=%d AND meta_key = %s", $form_id, $field_id );
 		if ( is_numeric( $field_id ) ) {
-			$sql .= $wpdb->prepare( " OR meta_key LIKE %s", sprintf( '%d.%%', $field_id ) );
+			$sql .= $wpdb->prepare( " OR form_id=%d AND meta_key LIKE %s", $form_id, sprintf( '%d.%%', $field_id ) );
 		}
 		$wpdb->query( $sql );
 
@@ -3137,7 +3137,8 @@ class GFFormsModel {
 
 		$value = $field->get_value_submission( $field_values, $get_from_post );
 
-		if ( $field->get_input_type() == 'list' && $field->enableColumns ) {
+		if ( $field->get_input_type() == 'list' && $field->enableColumns && $get_from_post && rgpost( 'is_submit_' . $field->formId ) ) {
+			/** @var GF_Field_List $field */
 			$value = $field->create_list_array_recursive( $value );
 		}
 
@@ -3627,11 +3628,11 @@ class GFFormsModel {
 			$value = rgget( $name, $field_values );
 		}
 
-		//converting list format
+		// Converting list format
 		if ( RGFormsModel::get_input_type( $field ) == 'list' ) {
 
-			//transforms this: col1|col2,col1b|col2b into this: col1,col2,col1b,col2b
-			$column_count = count( $field->choices );
+			// Transforms this: col1|col2,col1b|col2b into this: col1,col2,col1b,col2b
+			$column_count = is_array( $field->choices ) ? count( $field->choices ) : 0;
 
 			$rows = is_array( $value ) ? $value : explode( ',', $value );
 
@@ -5427,7 +5428,7 @@ class GFFormsModel {
 	 *
 	 * @since 1.0
 	 *
-	 * @param $new_key Gravity Forms license key to be saved.
+	 * @param string $new_key Gravity Forms license key to be saved.
 	 */
 	public static function save_key( $new_key ) {
 
@@ -6363,7 +6364,7 @@ class GFFormsModel {
 		} else {
 			if ( isset( $element['conditionalLogic'] ) && is_array( $element['conditionalLogic'] ) && isset( $element['conditionalLogic']['rules'] ) && is_array( $element['conditionalLogic']['rules'] ) ) {
 				foreach ( $element['conditionalLogic']['rules'] as &$rule ) {
-					$value = (string) $rule['value'];
+					$value = (string) rgar( $rule, 'value' );
 					if ( $value !== trim( $value ) ) {
 						$field      = isset( $form['fields'] ) ? GFFormsModel::get_field( $form, $rule['fieldId'] ) : array();
 						$trim_value = apply_filters( 'gform_trim_input_value', true, rgar( $form, 'id' ), $field );
